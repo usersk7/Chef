@@ -1,0 +1,217 @@
+DO_NOT_DELETE_SK_Chef_WS : 10.136.60.19
+
+DO_NOT_DELETE_SK_Chef_Server : 10.136.60.20
+
+DO_NOT_DELETE_SK_Chef_client: 10.136.60.21
+
+-----------------------------------------------------------------------------------------------------------------------
+
+CHEF Server Installation :
+
+- Download chef server from  "https://downloads.chef.io/chef-server"
+
+- install using "rpm -Uvh chef-server-core-12.16.9-1.el7.x86_64.rpm"we
+-hostname ""
+
+- chef-server-ctl reconfigure
+
+- chef-server-ctl install opscode-manage
+
+- chef-server-ctl install opscode-reporting
+
+
+now, Create the administrator user account and an organization
+- Create the first user
+#chef-server-ctl user-create USER_NAME FIRST_NAME [MIDDLE_NAME] LAST_NAME EMAIL 'PASSWORD'
+
+e.g.
+> chef-server-ctl user-create root Kiran Gund kiran.gund@gslab.com pM0dularc --filename ~/root.pem
+
+
+- now create an organization
+chef-server-ctl org-create ORG_NAME “ORG_FULL_NAME”
+
+#chef-server-ctl org-create gslab “GS Lab, Pune” --filename ~/chef-validator.pem
+
+e.g 
+> chef-server-ctl org-create gslab “GS Lab, Pune” --filename ~/chef-validator.pem
+
+
+- Associate the organization with users
+chef-server-ctl org-user-add ORG_NAME USER_NAME
+
+# chef-server-ctl org-user-add gslab root --admin
+
+e.g.
+> chef-server-ctl org-user-add gslab root --admin
+
+
+-----------------------------------------------------------------------------------------------------------------------
+CHEF workstation Installation : 
+
+- Download chef development kit from "https://downloads.chef.io/chefdk" and put into root location of workstation
+
+- install using "rpm -Uvh chefdk-2.1.11-1.el7.x86_64.rpm"
+
+- Now create chef repo : chef generate repo ~/chef-repo
+
+- cd ~/chef-repo/
+
+- mkdir .chef
+
+- cd .chef
+
+
+- go to server and copy files from server
+
+#chef-server> scp chef-validator.pem root@chefworkstationip:/root/chef-repo/.chef/
+e.g.> scp chef-validator.pem root@10.111.170.196:/root/chef-repo/.chef/
+
+#chef-server> scp root.pem root@10.136.60.82:/root/chef-repo/.chef/
+e.g.>scp root.pem root@10.111.170.196:/root/chef-repo/.chef/
+
+(for BP task : cp /root/root.pem /root/chef-validator.pem /root/chef-repo/.chef/   )
+
+come back to workstation  
+- Now create knife.rb file in folowwing folder -->  ~/chef-repo/.chef
+
+> cd ~/chef-repo/.chef
+
+>vi knife.rb
+
+
+(for BP task-->
+touch knife.rb
+
+cat >> knife.rb << EOF
+current_dir = File.dirname(__FILE__)
+log_level                :info
+log_location             STDOUT
+workstation name
+node_name                "root"
+#admin user key
+client_key               "#{current_dir}/root.pem"
+#validator name
+validation_client_name   "gslab-validator"
+validation_key           "#{current_dir}/chef-validator.pem" #validator key
+#Chef server name
+chef_server_url          "https://icdsbg0321.vcf.com/organizations/gslab"   *****here need to pass hostname...and append   .vcf.com
+cookbook_path            ["#{current_dir}/../cookbooks"]
+knife[:editor]="vim"
+EOF
+
+)
+
+- put folowwing details:
+
+
+current_dir = File.dirname(__FILE__)
+log_level                :info
+log_location             STDOUT
+workstation name
+node_name                "root"
+#admin user key
+client_key               "#{current_dir}/root.pem"
+#validator name
+validation_client_name   "gslab-validator"
+validation_key           "#{current_dir}/chef-validator.pem" #validator key
+#Chef server name
+chef_server_url          "https://chef-server-kiran-do-not-delete.novalocal/organizations/gslab"
+cookbook_path            ["#{current_dir}/../cookbooks"]
+knife[:editor]="vim"
+
+
+
+
+
+
+
+
+
+
+- put host entries in both
+
+- then very imp : disable firewall of workstation as well as server using folowwing commands:
+> service firewalld status
+> service firewalld stop
+> service firewalld status
+>  
+
+
+[root@chefworkstation .chef]# knife ssl fetch
+
+[root@chefworkstation .chef]# knife ssl check
+
+
+-----------------------------------------------------------------------------------------------------------------------
+
+create client machine put host entries everywhere 
+
+- You can install chef client on node and then register in chef server(generally we use this when we use hot files) 
+    or 
+- use  bootstrap command from workstation:
+> knife bootstrap 10.111.29.137 -x root -P pM0dularc -N Client5
+knife bootstrap 10.111.170.226 -x root -P pM0dularc -N kiran-do-not-delete
+
+-----------------------------------------------------------------------------------------------------------------------
+Writing ur first cookbook:
+
+> cd chef-repo/cookbooks/ 
+( for BP ---->>   cd /root/chef-repo/cookbooks/)
+
+> knife cookbook create kiran  "or"  chef generate cookbook kiran
+> cd manish/recipes/
+> vi default.rb
+
+Add the following :-
+
+#
+# Cookbook Name:: manish
+# Recipe:: default
+#
+# Copyright 2016, IBM Corporation
+#
+# All rights reserved - Do Not Redistribute
+#
+package 'Install Apache' do
+  case node[:platform]
+  when 'redhat', 'centos'
+    package_name 'httpd'
+  when 'ubuntu', 'debian'
+    package_name 'apache2'
+  end
+end
+
+service 'httpd' do
+  action [:enable, :start]
+end
+
+- from workstation run
+> knife cookbook upload manish
+then after putting host entries of client run
+> knife bootstrap 10.111.170.118 -x root -P pM0dularc -N Client6 -r 'recipe[docker_test
+knife bootstrap 10.111.170.226 -x root -P pM0dularc -r 'recipe[test]'
+knife bootstrap 10.136.60.6 -x root -P gsLab@123 -r 'recipe[nagios214]'
+
+chech whether installed or not 
+> httpd -v  
+
+--------------------------------------------------------------------------------------------------------------------------------------
+  
+Chef on windows(steps mainly for vrushal's server) : 
+
+- download chefdk from https://downloads.chef.io/chefdk and install
+
+- put host entry in host file
+
+- gererate chef repo
+
+- make one directory and put 2 key files of server into that (gsl-validator and vrushalp)
+
+- 
+
+
+docker run hello-world
+
+
+
